@@ -38,8 +38,8 @@ struct tcpheader {
     unsigned short int dest_port;  // Destination port
     unsigned int       sequence_number;    // Sequence number
     unsigned int       ack_num;    // Acknowledgment number
-    unsigned char      reserved:4;// Reserved
-    unsigned char      d_offset:4;  // Data offset
+    unsigned char      reserved:4,// Reserved
+                       d_offset:4;  // Data offset
     unsigned char      flags;     // Flags
     unsigned short int window;       // Window
     unsigned short int checksum;    // Checksum
@@ -48,17 +48,13 @@ struct tcpheader {
 
 
 //app
-typedef struct calculatorHeader {
+struct calculatorHeader {
     uint32_t timestamp;
     uint16_t total_length;
-    uint16_t reserved:3;
-    uint16_t cache_flag:1;
-    uint16_t steps_flag:1;
-    uint16_t type_flag:1;
-    uint16_t status_code:10;
+    uint16_t reserved:3, cache_flag:1, steps_flag:1, type_flag:1, status_code:10;
     uint16_t cache_control;
     uint16_t padding;
-} cpack, *pcpack;
+};
 
 //payload
 
@@ -78,44 +74,58 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
     printf("Got a packet\n");
     struct ethheader *eth = (struct ethheader *)packet;
     struct ipheader * ip = (struct ipheader *)(packet + sizeof(struct ethheader)); 
-    struct tcpheader * tcp_h = (struct tcpheader *)(packet + sizeof(struct ethheader)+ sizeof(struct ipheader)); 
-    pcpack app_h = (pcpack) (packet + sizeof(struct ethheader)+ sizeof(struct ipheader) + sizeof(struct tcpheader));
+    unsigned short iphdrlen = (ip->iph_ihl)*4;
+    struct tcpheader * tcp_h = (struct tcpheader *)(packet + sizeof(struct ethheader)+ iphdrlen);
+    unsigned int data_offset = (tcp_h->d_offset)* 4; 
+    struct calculatorHeader * app_h = (struct calculatorHeader *) (packet + sizeof(struct ethheader)+ iphdrlen + data_offset);
+    u_char * data = (u_char * )(packet + sizeof(struct ethheader)+ iphdrlen + data_offset + sizeof(app_h));
+    // printf("{ source_ip: %s, ", inet_ntoa(ip->iph_sourceip));
+    // printf("dest_ip: %s, ", inet_ntoa(ip->iph_destip));
 
-    printf("{ source_ip: %s, ", inet_ntoa(ip->iph_sourceip));
-    printf("dest_ip: %s, ", inet_ntoa(ip->iph_destip));
+    // printf("source_port: %hu, ", ntohs(tcp_h->source_port));
+    // printf("dest_port: %hu, ", ntohs(tcp_h->dest_port));
 
-    printf("source_port: %d, ", ntohs(tcp_h->source_port));
-    printf("dest_port: %d, ", ntohs(tcp_h->dest_port));
-
-    printf("timestamp: %d, ", ntohl(app_h->timestamp));
-    printf("total_length: %d, ", app_h->total_length);
-    printf("cache_flag: %d, ", app_h->cache_flag);
-    printf("steps_flag: %d, ", app_h->steps_flag);
-    printf("type_flag: %d, ", app_h->type_flag);
-    printf("status_code: %d, ", app_h->status_code);
-    printf("cache_control: %d, ", app_h->cache_control);
+    // printf("timestamp: %u, ", ntohl(app_h->timestamp));
+    // printf("total_length: %u, ", ntohs(app_h->total_length));
+    // printf("cache_flag: %d, ", ntohs(app_h->cache_flag));
+    // printf("steps_flag: %d, ", ntohs(app_h->steps_flag));
+    // printf("type_flag: %d, ", ntohs(app_h->type_flag));
+    // printf("status_code: %u, ", ntohs(app_h->status_code));
+    // printf("cache_control: %u, ", ntohs(app_h->cache_control));
 
 
 
 
   if (ntohs(eth->ether_type) == 0x0800) { // 0x0800 is IP type
-    //app
 
-    //data
 
     /* determine protocol */
     switch(ip->iph_protocol) {                               
         case IPPROTO_TCP:
             printf("   Protocol: TCP\n");
-            return;
-        case IPPROTO_UDP:
-            printf("   Protocol: UDP\n");
-            return;
-        case IPPROTO_ICMP:
-            printf("   Protocol: ICMP\n");
-            return;
+
+            printf("{ source_ip: %s, ", inet_ntoa(ip->iph_sourceip));
+            printf("dest_ip: %s, ", inet_ntoa(ip->iph_destip));
+
+            printf("source_port: %u, ", ntohs(tcp_h->source_port));
+            printf("dest_port: %u, ", ntohs(tcp_h->dest_port));
+
+            printf("timestamp: %u, ", ntohl(app_h->timestamp));
+            printf("total_length: %u, ", ntohs(app_h->total_length));
+            printf("cache_flag: %hu, ", app_h->cache_flag);
+            printf("steps_flag: %hu, ", app_h->steps_flag);
+            printf("type_flag: %hu, ", app_h->type_flag);
+            printf("status_code: %u, ", ntohs(app_h->status_code));
+            printf("cache_control: %u, ", ntohs(app_h->cache_control));
+            printf("data: \n");
+
+            for (int i = 0; i < sizeof(data); i++ )
+            {
+              if ( !(i & 15) ) printf("\n%04X:  ", i);
+              printf("%02X ", ((unsigned char*)data)[i]);
+            }
+            printf("\n");
         default:
-            printf("   Protocol: others\n");
             return;
     }
   }
@@ -126,7 +136,7 @@ int main()
   pcap_t *handle;
   char errbuf[PCAP_ERRBUF_SIZE];
   struct bpf_program fp;
-  char filter_exp[] = "tcp port 9999 9998";
+  char filter_exp[] = "tcp port 9998-9999";
   bpf_u_int32 net;
 
   // Step 1: Open live pcap session on NIC with name lo

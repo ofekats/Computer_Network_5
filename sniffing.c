@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 
-#define ETHER_ADDR_LEN 16
+#define ETHER_ADDR_LEN 6
 
 /* Ethernet header */
 struct ethheader {
@@ -48,7 +48,7 @@ struct tcpheader {
 
 
 //app
-typedef struct calculatorPacket {
+typedef struct calculatorHeader {
     uint32_t timestamp;
     uint16_t total_length;
     uint16_t reserved:3;
@@ -66,18 +66,36 @@ typedef struct calculatorPacket {
     // printf("       From: %s\n", inet_ntoa(ip->iph_sourceip));  
     // printf("         To: %s\n", inet_ntoa(ip->iph_destip)); 
 
+
+//     { source_ip: <input>,
+// dest_ip: <input>, source_port: <input>, dest_port: <input>, timestamp: <input>, total_length:
+// <input>, cache_flag: <input>, steps_flag: <input>, type_flag: <input>, status_code: <input>,
+// cache_control: <input>, data: <input> }
+
+
 void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 {
     printf("Got a packet\n");
     struct ethheader *eth = (struct ethheader *)packet;
     struct ipheader * ip = (struct ipheader *)(packet + sizeof(struct ethheader)); 
     struct tcpheader * tcp_h = (struct tcpheader *)(packet + sizeof(struct ethheader)+ sizeof(struct ipheader)); 
+    pcpack app_h = (pcpack) (packet + sizeof(struct ethheader)+ sizeof(struct ipheader) + sizeof(struct tcpheader));
 
     printf("{ source_ip: %s, ", inet_ntoa(ip->iph_sourceip));
     printf("dest_ip: %s, ", inet_ntoa(ip->iph_destip));
 
-    printf("source_port: %d, ", tcp_h->source_port);
-    printf("dest_port: %d, ", tcp_h->dest_port);
+    printf("source_port: %d, ", ntohs(tcp_h->source_port));
+    printf("dest_port: %d, ", ntohs(tcp_h->dest_port));
+
+    printf("timestamp: %d, ", ntohl(app_h->timestamp));
+    printf("total_length: %d, ", app_h->total_length);
+    printf("cache_flag: %d, ", app_h->cache_flag);
+    printf("steps_flag: %d, ", app_h->steps_flag);
+    printf("type_flag: %d, ", app_h->type_flag);
+    printf("status_code: %d, ", app_h->status_code);
+    printf("cache_control: %d, ", app_h->cache_control);
+
+
 
 
   if (ntohs(eth->ether_type) == 0x0800) { // 0x0800 is IP type
@@ -108,10 +126,10 @@ int main()
   pcap_t *handle;
   char errbuf[PCAP_ERRBUF_SIZE];
   struct bpf_program fp;
-  char filter_exp[] = "tcp";
+  char filter_exp[] = "tcp port 9999 9998";
   bpf_u_int32 net;
 
-  // Step 1: Open live pcap session on NIC with name eth3
+  // Step 1: Open live pcap session on NIC with name lo
   handle = pcap_open_live("lo", BUFSIZ, 1, 1000, errbuf); 
 
   // Step 2: Compile filter_exp into BPF psuedo-code

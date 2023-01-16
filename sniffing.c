@@ -87,8 +87,8 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
     fprintf(fp,"  cache_flag: %hu, ", app_h->cache_flag);
     fprintf(fp,"steps_flag: %hu, ", app_h->steps_flag);
     fprintf(fp,"type_flag: %hu, \n", app_h->type_flag);
-    fprintf(fp,"  status_code: %u, ", ntohs(app_h->status_code));
-    fprintf(fp,"cache_control: %u, ", ntohs(app_h->cache_control));
+    fprintf(fp,"  status_code: %hu, ", ntohs(app_h->status_code));
+    fprintf(fp,"cache_control: %hu, ", ntohs(app_h->cache_control));
     fprintf(fp,"\n  data:");
     if (data_size > 0)
     {
@@ -120,11 +120,18 @@ int main()
 
   // Step 2: Compile filter_exp into BPF psuedo-code
   pcap_compile(handle, &fp, filter_exp, 0, net);      
-  pcap_setfilter(handle, &fp);                             
+  pcap_setfilter(handle, &fp);  
 
+  FILE * fp1 = fopen("322953308_315138693", "w"); // open file for writing
+  if (fp1 == NULL) {
+      printf("Error opening file!\n");
+      return -1;
+  }
+  fclose(fp1); 
   // Step 3: Capture packets
-  pcap_loop(handle, -1, got_packet, NULL);                
+  pcap_loop(handle, -1, got_packet, NULL);             
   //Close the handle
-  pcap_close(handle);    
+  pcap_close(handle); 
+
   return 0;
 }

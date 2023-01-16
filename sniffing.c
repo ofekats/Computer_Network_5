@@ -27,11 +27,6 @@ struct ipheader {
   struct  in_addr    iph_destip;   //Destination IP address 
 };
 
-//tcp 
-
-//s_port
-//d_port
-
 /* TCP Header */
 struct tcpheader {
     unsigned short int  source_port;   // Source port
@@ -55,13 +50,6 @@ struct calculatorHeader {
     uint16_t cache_control;
     uint16_t padding;
 };
-
-//payload
-
-
-    // printf("       From: %s\n", inet_ntoa(ip->iph_sourceip));  
-    // printf("         To: %s\n", inet_ntoa(ip->iph_destip)); 
-
 
 //     { source_ip: <input>,
 // dest_ip: <input>, source_port: <input>, dest_port: <input>, timestamp: <input>, total_length:
@@ -94,8 +82,8 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
     fprintf(fp,"  source_port: %u, ", ntohs(tcp_h->source_port));
     fprintf(fp,"dest_port: %u, \n", ntohs(tcp_h->dest_port));
 
-    fprintf(fp,"  timestamp: %u, ", ntohl(app_h->timestamp)); //app_h->timestamp));
-    fprintf(fp,"total_length: %u, \n", ntohs(ip->iph_len));//app_h->total_length));
+    fprintf(fp,"  timestamp: %u, ", ntohl(app_h->timestamp));
+    fprintf(fp,"total_length: %u, \n", ntohs(ip->iph_len));
     fprintf(fp,"  cache_flag: %hu, ", app_h->cache_flag);
     fprintf(fp,"steps_flag: %hu, ", app_h->steps_flag);
     fprintf(fp,"type_flag: %hu, \n", app_h->type_flag);
@@ -136,7 +124,7 @@ int main()
 
   // Step 3: Capture packets
   pcap_loop(handle, -1, got_packet, NULL);                
-
-  pcap_close(handle);   //Close the handle 
+  //Close the handle
+  pcap_close(handle);    
   return 0;
 }

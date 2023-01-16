@@ -71,65 +71,53 @@ struct calculatorHeader {
 
 void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 {
-    printf("Got a packet\n");
-    struct ethheader *eth = (struct ethheader *)packet;
-    struct ipheader * ip = (struct ipheader *)(packet + sizeof(struct ethheader)); 
-    unsigned short iphdrlen = (ip->iph_ihl)*4;
-    struct tcpheader * tcp_h = (struct tcpheader *)(packet + sizeof(struct ethheader)+ iphdrlen);
-    unsigned int data_offset = (tcp_h->d_offset)* 4; 
-    struct calculatorHeader * app_h = (struct calculatorHeader *) (packet + sizeof(struct ethheader)+ iphdrlen + data_offset);
-    u_char * data = (u_char * )(packet + sizeof(struct ethheader)+ iphdrlen + data_offset + sizeof(app_h));
-    // printf("{ source_ip: %s, ", inet_ntoa(ip->iph_sourceip));
-    // printf("dest_ip: %s, ", inet_ntoa(ip->iph_destip));
-
-    // printf("source_port: %hu, ", ntohs(tcp_h->source_port));
-    // printf("dest_port: %hu, ", ntohs(tcp_h->dest_port));
-
-    // printf("timestamp: %u, ", ntohl(app_h->timestamp));
-    // printf("total_length: %u, ", ntohs(app_h->total_length));
-    // printf("cache_flag: %d, ", ntohs(app_h->cache_flag));
-    // printf("steps_flag: %d, ", ntohs(app_h->steps_flag));
-    // printf("type_flag: %d, ", ntohs(app_h->type_flag));
-    // printf("status_code: %u, ", ntohs(app_h->status_code));
-    // printf("cache_control: %u, ", ntohs(app_h->cache_control));
-
-
-
-
-  if (ntohs(eth->ether_type) == 0x0800) { // 0x0800 is IP type
-
-
-    /* determine protocol */
-    switch(ip->iph_protocol) {                               
-        case IPPROTO_TCP:
-            printf("   Protocol: TCP\n");
-
-            printf("{ source_ip: %s, ", inet_ntoa(ip->iph_sourceip));
-            printf("dest_ip: %s, ", inet_ntoa(ip->iph_destip));
-
-            printf("source_port: %u, ", ntohs(tcp_h->source_port));
-            printf("dest_port: %u, ", ntohs(tcp_h->dest_port));
-
-            printf("timestamp: %u, ", ntohl(app_h->timestamp));
-            printf("total_length: %u, ", ntohs(app_h->total_length));
-            printf("cache_flag: %hu, ", app_h->cache_flag);
-            printf("steps_flag: %hu, ", app_h->steps_flag);
-            printf("type_flag: %hu, ", app_h->type_flag);
-            printf("status_code: %u, ", ntohs(app_h->status_code));
-            printf("cache_control: %u, ", ntohs(app_h->cache_control));
-            printf("data: \n");
-
-            for (int i = 0; i < sizeof(data); i++ )
-            {
-              if ( !(i & 15) ) printf("\n%04X:  ", i);
-              printf("%02X ", ((unsigned char*)data)[i]);
-            }
-            printf("\n");
-        default:
-            return;
-    }
+  FILE *fp;
+  fp = fopen("322953308_315138693", "a"); // open file for writing
+  if (fp == NULL) {
+      printf("Error opening file!\n");
+      return;
   }
+  
+  struct ethheader *eth = (struct ethheader *)packet;
+  struct ipheader * ip = (struct ipheader *)(packet + sizeof(struct ethheader)); 
+  unsigned short iphdrlen = (ip->iph_ihl)*4;
+  struct tcpheader * tcp_h = (struct tcpheader *)(packet + sizeof(struct ethheader)+ iphdrlen);
+  unsigned int data_offset = (tcp_h->d_offset)* 4; 
+  struct calculatorHeader * app_h = (struct calculatorHeader *) (packet + sizeof(struct ethheader)+ iphdrlen + data_offset);
+  u_char * data = (u_char * )(packet + sizeof(struct ethheader)+ iphdrlen + data_offset + sizeof(app_h));
+  unsigned int data_size = ntohs(ip->iph_len) - (iphdrlen + data_offset);
+  if(ip->iph_protocol == IPPROTO_TCP)
+  {
+    fprintf(fp,"{ source_ip: %s, ", inet_ntoa(ip->iph_sourceip));
+    fprintf(fp,"dest_ip: %s, \n", inet_ntoa(ip->iph_destip));
+
+    fprintf(fp,"  source_port: %u, ", ntohs(tcp_h->source_port));
+    fprintf(fp,"dest_port: %u, \n", ntohs(tcp_h->dest_port));
+
+    fprintf(fp,"  timestamp: %u, ", ntohl(app_h->timestamp)); //app_h->timestamp));
+    fprintf(fp,"total_length: %u, \n", ntohs(ip->iph_len));//app_h->total_length));
+    fprintf(fp,"  cache_flag: %hu, ", app_h->cache_flag);
+    fprintf(fp,"steps_flag: %hu, ", app_h->steps_flag);
+    fprintf(fp,"type_flag: %hu, \n", app_h->type_flag);
+    fprintf(fp,"  status_code: %u, ", ntohs(app_h->status_code));
+    fprintf(fp,"cache_control: %u, ", ntohs(app_h->cache_control));
+    fprintf(fp,"\n  data:");
+    if (data_size > 0)
+    {
+      for (int i = 0; i < data_size; i++ )
+      {
+        if ( !(i & 15) ) fprintf(fp,"\n%04X:  ", i);
+        fprintf(fp,"%02X ", ((unsigned char*)data)[i]);
+      }
+    }else{
+      fprintf(fp,"there is no data!");
+    }
+    fprintf(fp,"}\n");
+    fprintf(fp,"\n");
+  }
+  fclose(fp);
 }
+
 
 int main()
 {

@@ -1,8 +1,18 @@
 #include <pcap.h>
 #include <stdio.h>
 #include <arpa/inet.h>
+#include <stdlib.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <net/ethernet.h>
+#include <sys/socket.h>
+#include <errno.h>
+#include <unistd.h>
+#include <string.h>
+#include <time.h>
+#include <pcap/pcap.h>
 
-#define ETHER_ADDR_LEN 6
+//#define ETHER_ADDR_LEN 6
 
 /* Ethernet header */
 struct ethheader {
@@ -28,25 +38,39 @@ struct ipheader {
 };
 
 /* TCP Header */
-struct tcpheader {
-    unsigned short int  source_port;   // Source port
-    unsigned short int dest_port;  // Destination port
-    unsigned int       sequence_number;    // Sequence number
-    unsigned int       ack_num;    // Acknowledgment number
-    unsigned char      reserved:4,// Reserved
-                       d_offset:4;  // Data offset
-    unsigned char      flags;     // Flags
-    unsigned short int window;       // Window
-    unsigned short int checksum;    // Checksum
-    unsigned short int urg_ptr;    // Urgent pointer
-};
+// struct tcpheader {
+//     unsigned short int  source_port;   // Source port
+//     unsigned short int dest_port;  // Destination port
+//     unsigned int       sequence_number;    // Sequence number
+//     unsigned int       ack_num;    // Acknowledgment number
+//     unsigned char      reserved:4,// Reserved
+//                        d_offset:4;  // Data offset
+//     unsigned char      flags;     // Flags
+//     unsigned short int window;       // Window
+//     unsigned short int checksum;    // Checksum
+//     unsigned short int urg_ptr;    // Urgent pointer
+// };
 
 
 //app
-struct calculatorHeader {
+// struct calculatorHeader {
+//     uint32_t timestamp;
+//     uint16_t total_length;
+//     uint16_t reserved:3, cache_flag:1, steps_flag:1, type_flag:1, status_code:10;
+//     uint16_t cache_control;
+//     uint16_t padding;
+// };
+struct calculatorHeader
+{
     uint32_t timestamp;
     uint16_t total_length;
-    uint16_t reserved:3, cache_flag:1, steps_flag:1, type_flag:1, status_code:10;
+
+    union
+    {
+        uint16_t flags;
+        uint16_t _reserved:3, cache_flag:1, steps_flag:1, type_flag:1, status_code:10;
+    };
+    
     uint16_t cache_control;
     uint16_t padding;
 };
@@ -68,27 +92,33 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
   
   struct ethheader *eth = (struct ethheader *)packet;
   struct ipheader * ip = (struct ipheader *)(packet + sizeof(struct ethheader)); 
-  unsigned short iphdrlen = (ip->iph_ihl)*4;
-  struct tcpheader * tcp_h = (struct tcpheader *)(packet + sizeof(struct ethheader)+ iphdrlen);
-  unsigned int data_offset = (tcp_h->d_offset)* 4; 
-  struct calculatorHeader * app_h = (struct calculatorHeader *) (packet + sizeof(struct ethheader)+ iphdrlen + data_offset);
-  u_char * data = (u_char * )(packet + sizeof(struct ethheader)+ iphdrlen + data_offset + sizeof(app_h));
-  unsigned int data_size = ntohs(ip->iph_len) - (iphdrlen + data_offset);
+  //unsigned short iphdrlen = (ip->iph_ihl)*4;
+  struct tcphdr * tcp = (struct tcphdr *)(packet + sizeof(struct ethheader)+ ((ip->iph_ihl)*4));
+  //unsigned int data_offset = ((tcp->doff)* 4);
+  if (tcp->psh != 1)
+        return; 
+  struct calculatorHeader * app_h = (struct calculatorHeader *) (packet + sizeof(struct ethheader)+ ((ip->iph_ihl)*4) + ((tcp->doff)* 4));
+  
+  //struct calculatorHeader * app_h = (struct calculatorHeader *) (packet + sizeof(struct ethheader)+ sizeof(struct ipheader)+sizeof(struct tcpheader));
+  
+  u_char * data = (u_char * )(packet + sizeof(struct ethheader)+ ((ip->iph_ihl)*4) + ((tcp->doff)* 4) + sizeof(struct calculatorHeader));//12);//
+  unsigned int data_size = ntohs(ip->iph_len) - (((ip->iph_ihl)*4) + ((tcp->doff)* 4));
   if(ip->iph_protocol == IPPROTO_TCP)
   {
     fprintf(fp,"{ source_ip: %s, ", inet_ntoa(ip->iph_sourceip));
     fprintf(fp,"dest_ip: %s, \n", inet_ntoa(ip->iph_destip));
 
-    fprintf(fp,"  source_port: %u, ", ntohs(tcp_h->source_port));
-    fprintf(fp,"dest_port: %u, \n", ntohs(tcp_h->dest_port));
+    fprintf(fp,"  source_port: %hu, ", ntohs(tcp->source));
+    fprintf(fp,"dest_port: %hu, \n", ntohs(tcp->dest));
 
-    fprintf(fp,"  timestamp: %u, ", ntohl(app_h->timestamp));
-    fprintf(fp,"total_length: %u, \n", ntohs(ip->iph_len));
+
+    fprintf(fp,"  timestamp: %u, ", ntohl(app_h->timestamp));//(int)(header->ts.tv_sec));
+    fprintf(fp,"total_length: %hu, \n", ntohs(ip->iph_len));
     fprintf(fp,"  cache_flag: %hu, ", app_h->cache_flag);
     fprintf(fp,"steps_flag: %hu, ", app_h->steps_flag);
     fprintf(fp,"type_flag: %hu, \n", app_h->type_flag);
-    fprintf(fp,"  status_code: %hu, ", ntohs(app_h->status_code));
-    fprintf(fp,"cache_control: %hu, ", ntohs(app_h->cache_control));
+    fprintf(fp,"  status_code: %hu, ", app_h->status_code);
+    fprintf(fp,"cache_control: %hu, ", app_h->cache_control);
     fprintf(fp,"\n  data:");
     if (data_size > 0)
     {

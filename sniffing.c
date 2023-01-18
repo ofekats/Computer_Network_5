@@ -53,27 +53,27 @@ struct ipheader {
 
 
 //app
-// struct calculatorHeader {
-//     uint32_t timestamp;
-//     uint16_t total_length;
-//     uint16_t reserved:3, cache_flag:1, steps_flag:1, type_flag:1, status_code:10;
-//     uint16_t cache_control;
-//     uint16_t padding;
-// };
-struct calculatorHeader
-{
+struct calculatorHeader {
     uint32_t timestamp;
     uint16_t total_length;
-
-    union
-    {
-        uint16_t flags;
-        uint16_t _reserved:3, cache_flag:1, steps_flag:1, type_flag:1, status_code:10;
-    };
-    
+    uint16_t flags;//reserved:3, cache_flag:1, steps_flag:1, type_flag:1, status_code:10;
     uint16_t cache_control;
     uint16_t padding;
 };
+// struct calculatorHeader
+// {
+//     uint32_t timestamp;
+//     uint16_t total_length;
+
+//     union
+//     {
+//         uint16_t flags;
+//         uint16_t _reserved:3, cache_flag:1, steps_flag:1, type_flag:1, status_code:10;
+//     };
+    
+//     uint16_t cache_control;
+//     uint16_t padding;
+// };
 
 //     { source_ip: <input>,
 // dest_ip: <input>, source_port: <input>, dest_port: <input>, timestamp: <input>, total_length:
@@ -114,10 +114,10 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
 
     fprintf(fp,"  timestamp: %u, ", ntohl(app_h->timestamp));//(int)(header->ts.tv_sec));
     fprintf(fp,"total_length: %hu, \n", ntohs(ip->iph_len));
-    fprintf(fp,"  cache_flag: %hu, ", app_h->cache_flag);
-    fprintf(fp,"steps_flag: %hu, ", app_h->steps_flag);
-    fprintf(fp,"type_flag: %hu, \n", app_h->type_flag);
-    fprintf(fp,"  status_code: %hu, ", app_h->status_code);
+    fprintf(fp,"  cache_flag: %hu, ", (app_h->flags>>12)&1);//cache_flag);
+    fprintf(fp,"steps_flag: %hu, ", (app_h->flags>>11)&1);//steps_flag);
+    fprintf(fp,"type_flag: %hu, \n", (app_h->flags>>10)&1);//type_flag);
+    fprintf(fp,"  status_code: %hu, ", (app_h->flags)&1023);//status_code);
     fprintf(fp,"cache_control: %hu, ", app_h->cache_control);
     fprintf(fp,"\n  data:");
     if (data_size > 0)

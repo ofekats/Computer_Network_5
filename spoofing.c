@@ -149,7 +149,7 @@ void tcp(char * buffer, struct ipheader *ip)
 
 int main() {
 
-//icmp
+
   char buffer[1500];
 
   memset(buffer, 0, 1500);

@@ -51,8 +51,7 @@ void send_raw_ip_packet(struct ipheader* ip)
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
 
     // Step 2: Set socket option.
-    setsockopt(sock, IPPROTO_IP, IP_HDRINCL, 
-                     &enable, sizeof(enable));
+    setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &enable, sizeof(enable));
 
     // Step 3: Provide needed information about destination.
     dest_info.sin_family = AF_INET;
@@ -72,10 +71,10 @@ void send_raw_ip_packet(struct ipheader* ip)
 
 void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *packet)
 {
-
+  //pointers
   struct ipheader * got_packet_ip_header = (struct ipheader *)(packet+ 14); 
   struct icmpheader *icmp = (struct icmpheader *) (packet + 14 + sizeof(struct ipheader));
-
+  //only icmp request packet
   if(got_packet_ip_header->ip_p == IPPROTO_ICMP && icmp->icmp_type == 8)
   {
 
@@ -86,9 +85,7 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
     ip1->ip_v= 4;
     ip1->ip_hl = 5;
     ip1->ip_ttl = 20;
-    
-    //printf("dest: %s\n", inet_ntoa(got_packet_ip_header->ip_dst));
-    
+    //replace ip source and ip dest
     ip1->ip_dst.s_addr = got_packet_ip_header->ip_src.s_addr;
     ip1->ip_src.s_addr = got_packet_ip_header->ip_dst.s_addr;
     struct icmpheader *icmp_our = (struct icmpheader *) (buffer + sizeof(struct ipheader));
@@ -111,10 +108,12 @@ int main()
   pcap_t *handle;
   char errbuf[PCAP_ERRBUF_SIZE];
   struct bpf_program fp;
+  //filter only icmp
   char filter_exp[] = "icmp";
   bpf_u_int32 net;
   
-  // Step 1: Open live pcap session on NIC with name lo
+  // Step 1: Open live pcap session on NIC 
+  //listen to the attack id by ifconfig 
   handle = pcap_open_live("br-a39d62a9d71e", BUFSIZ, 1, 1000, errbuf); 
   
   // Step 2: Compile filter_exp into BPF psuedo-code

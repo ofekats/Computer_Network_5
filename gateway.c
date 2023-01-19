@@ -15,7 +15,7 @@
 
 
 #define P 10000
-#define SERVER_IP_ADDRESS "127.0.0.1"
+#define SERVER_IP_ADDRESS "10.9.0.1"
 
 int main(int argc, char ** argv)
 {
@@ -50,26 +50,12 @@ int main(int argc, char ** argv)
 		return -1;
 	}
 
-	//Setup the server address structure //we got in terminal.
-    struct sockaddr_in serverAddress_P1;
-	memset(&serverAddress_P1, 0, sizeof(serverAddress_P1));
-	serverAddress_P1.sin_family = AF_INET;
-	serverAddress_P1.sin_port = htons(P+1);
-	int rval2 = inet_pton(AF_INET, (const char*)SERVER_IP_ADDRESS, &serverAddress_P1.sin_addr);
-	if (rval2 <= 0)
-	{
-		printf("inet_pton() 2 failed");
-		close(s_P);
-		return -1;
-	}
-
 
 	//Bind to s_P
 	if (bind(s_P, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1)
 	{
 		printf("bind() failed with error code : %d", errno);
 		// TODO: cleanup the socket;
-		close(s_P1);
 		close(s_P);
 		return -1;
 	}
@@ -87,11 +73,23 @@ int main(int argc, char ** argv)
 	}
 	printf("Creates sock p1\n");
 
+	//Setup the server address structure //we got in terminal.
+    struct sockaddr_in serverAddress_P1;
+	memset(&serverAddress_P1, 0, sizeof(serverAddress_P1));
+	serverAddress_P1.sin_family = AF_INET;
+	serverAddress_P1.sin_port = htons(P+1);
+	int rval2 = inet_pton(AF_INET, (const char*)SERVER_IP_ADDRESS, &serverAddress_P1.sin_addr);
+	if (rval2 <= 0)
+	{
+		printf("inet_pton() 2 failed");
+		close(s_P);
+		return -1;
+	}
+
 	//Bind to s_P1
 	if (bind(s_P1, (struct sockaddr *)&serverAddress_P1, sizeof(serverAddress_P1)) == -1)
 	{
-		printf("bind() failed with error code : %d", errno);
-		// TODO: cleanup the socket;
+		printf("bind() p1 failed with error code : %d\n", errno);
 		close(s_P1);
 		close(s_P);
 		return -1;
@@ -131,28 +129,48 @@ int main(int argc, char ** argv)
 		char clientIPAddrReadable[32] = { '\0' };
 		inet_ntop(AF_INET, &clientAddress.sin_addr, clientIPAddrReadable, sizeof(clientIPAddrReadable));
 
-		//print details of the client/peer and the data received
+		//print details of the client and the data received
 		printf("Received packet from %s:%d\n", clientIPAddrReadable, ntohs(clientAddress.sin_port));
 		printf("Data is: %s\n", buffer);
+
+		char IPAddrReadable[32] = { '\0' };
+		inet_ntop(AF_INET, &serverAddress_P1.sin_addr, IPAddrReadable, sizeof(IPAddrReadable));
+		printf("the server %s:%d\n", IPAddrReadable, ntohs(serverAddress_P1.sin_port));
+
+		struct sockaddr_in serverAddress_P1_new;
+		memset(&serverAddress_P1_new, 0, sizeof(serverAddress_P1_new));
+		serverAddress_P1_new.sin_family = AF_INET;
+		serverAddress_P1_new.sin_port = htons(P+1);
+		int rval2 = inet_pton(AF_INET, (const char*)destination_ip, &serverAddress_P1_new.sin_addr);
+		if (rval2 <= 0)
+		{
+			printf("inet_pton() 2 failed");
+			close(s_P);
+			return -1;
+		}
+
+		char IPAddrReadable2[32] = { '\0' };
+		inet_ntop(AF_INET, &serverAddress_P1_new.sin_addr, IPAddrReadable2, sizeof(IPAddrReadable2));
+		printf("sent packet to %s:%d\n", IPAddrReadable2, ntohs(serverAddress_P1_new.sin_port));
+
 
 		if(recv_len > 0)
 		{
 			float random = ((float)rand())/((float)RAND_MAX);
-			printf("Got packet!\n");
 			printf("random = %f\n", random);
 			if(random > 0.5)
 			{
-				//now reply to the Client
-				int send = sendto(s_P1, buffer, recv_len, 0, (struct sockaddr*) &serverAddress_P1, sizeof(serverAddress_P1));
+				//now reply
+				int send = sendto(s_P1, buffer, recv_len, 0, (struct sockaddr*) &serverAddress_P1_new, sizeof(serverAddress_P1_new));
 				if (send == -1)
 				{
-					printf("sendto() failed with error code :  %d", errno);
+					printf("sendto() p1 failed with error code :  %d\n", errno);
 					close(s_P1);
 					close(s_P);
 					break;
 				}
 				printf("send: %d\n",send);
-				printf("sent packet to P+1!!!\n");
+				printf("sent packet to P+1!\n\n");
 			}
 
 		}

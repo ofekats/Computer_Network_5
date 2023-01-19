@@ -125,30 +125,12 @@ void tcp(char * buffer, struct ipheader *ip)
   ip->iph_protocol = IPPROTO_TCP;
   ip->iph_len = htons(sizeof(struct ipheader) + ((tcp->doff)* 4) + data_len);
   tcp->check =0;
-  //tcp->check = csum_tcpudp_nofold(ip->iph_sourceip.s_addr, ip->iph_destip.s_addr, ip->iph_len, ip->iph_protocol, tcp->check);
-
   send_raw_ip_packet (ip);
   
 
 }
 
-/* TCP Header */
-// struct tcpheader {
-//     unsigned short int  source_port;   // Source port
-//     unsigned short int dest_port;  // Destination port
-//     unsigned int       sequence_number;    // Sequence number
-//     unsigned int       ack_num;    // Acknowledgment number
-//     unsigned char      reserved:4,// Reserved
-//                        d_offset:4;  // Data offset
-//     unsigned char      flags;     // Flags
-//     unsigned short int window;       // Window
-//     unsigned short int checksum;    // Checksum
-//     unsigned short int urg_ptr;    // Urgent pointer
-// };
-
-
 int main() {
-
 
   char buffer[1500];
 
@@ -163,14 +145,15 @@ int main() {
 
   //icmp
   icmp(buffer,ip);
+  
   //udp
-  udp(buffer,ip);
+  //udp(buffer,ip);
+  
   //tcp
-  tcp(buffer, ip);
+  //tcp(buffer, ip);
   
   return 0;
 }
-
 
 // Compute checksum (RFC 1071).
 

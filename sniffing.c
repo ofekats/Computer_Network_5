@@ -37,22 +37,7 @@ struct ipheader {
   struct  in_addr    iph_destip;   //Destination IP address 
 };
 
-/* TCP Header */
-// struct tcpheader {
-//     unsigned short int  source_port;   // Source port
-//     unsigned short int dest_port;  // Destination port
-//     unsigned int       sequence_number;    // Sequence number
-//     unsigned int       ack_num;    // Acknowledgment number
-//     unsigned char      reserved:4,// Reserved
-//                        d_offset:4;  // Data offset
-//     unsigned char      flags;     // Flags
-//     unsigned short int window;       // Window
-//     unsigned short int checksum;    // Checksum
-//     unsigned short int urg_ptr;    // Urgent pointer
-// };
-
-
-//app
+/* APP Header */
 struct calculatorHeader {
     uint32_t timestamp;
     uint16_t total_length;
@@ -60,22 +45,8 @@ struct calculatorHeader {
     uint16_t cache_control;
     uint16_t padding;
 };
-// struct calculatorHeader
-// {
-//     uint32_t timestamp;
-//     uint16_t total_length;
 
-//     union
-//     {
-//         uint16_t flags;
-//         uint16_t _reserved:3, cache_flag:1, steps_flag:1, type_flag:1, status_code:10;
-//     };
-    
-//     uint16_t cache_control;
-//     uint16_t padding;
-// };
-
-//     { source_ip: <input>,
+// packet: { source_ip: <input>,
 // dest_ip: <input>, source_port: <input>, dest_port: <input>, timestamp: <input>, total_length:
 // <input>, cache_flag: <input>, steps_flag: <input>, type_flag: <input>, status_code: <input>,
 // cache_control: <input>, data: <input> }
@@ -90,19 +61,18 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
       return;
   }
   
+  //pointers
   struct ethheader *eth = (struct ethheader *)packet;
   struct ipheader * ip = (struct ipheader *)(packet + sizeof(struct ethheader)); 
-  //unsigned short iphdrlen = (ip->iph_ihl)*4;
   struct tcphdr * tcp = (struct tcphdr *)(packet + sizeof(struct ethheader)+ ((ip->iph_ihl)*4));
-  //unsigned int data_offset = ((tcp->doff)* 4);
+
+  //only packets with data (without handshake and closed)
   if (tcp->psh != 1)
         return; 
   struct calculatorHeader * app_h = (struct calculatorHeader *) (packet + sizeof(struct ethheader)+ ((ip->iph_ihl)*4) + ((tcp->doff)* 4));
-  
-  //struct calculatorHeader * app_h = (struct calculatorHeader *) (packet + sizeof(struct ethheader)+ sizeof(struct ipheader)+sizeof(struct tcpheader));
-  
-  u_char * data = (u_char * )(packet + sizeof(struct ethheader)+ ((ip->iph_ihl)*4) + ((tcp->doff)* 4) + sizeof(struct calculatorHeader));//12);//
+  u_char * data = (u_char * )(packet + sizeof(struct ethheader)+ ((ip->iph_ihl)*4) + ((tcp->doff)* 4) + sizeof(struct calculatorHeader));
   unsigned int data_size = ntohs(ip->iph_len) - (((ip->iph_ihl)*4) + ((tcp->doff)* 4));
+  //only TCP packet
   if(ip->iph_protocol == IPPROTO_TCP)
   {
     fprintf(fp,"{ source_ip: %s, ", inet_ntoa(ip->iph_sourceip));
@@ -142,6 +112,7 @@ int main()
   pcap_t *handle;
   char errbuf[PCAP_ERRBUF_SIZE];
   struct bpf_program fp;
+  //filter to tcp port 9998-9999 (by EX2)
   char filter_exp[] = "tcp port 9998-9999";
   bpf_u_int32 net;
 

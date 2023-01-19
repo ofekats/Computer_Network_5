@@ -12,6 +12,7 @@
 #include <time.h>
 #include <pcap/pcap.h>
 
+/* IP Header  */
 struct ipheader {
     unsigned int ip_hl:4;          /* header length */
     unsigned int ip_v:4;           /* version */

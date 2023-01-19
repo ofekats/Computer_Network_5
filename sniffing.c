@@ -12,8 +12,6 @@
 #include <time.h>
 #include <pcap/pcap.h>
 
-//#define ETHER_ADDR_LEN 6
-
 /* Ethernet header */
 struct ethheader {
   u_char  ether_dhost[ETHER_ADDR_LEN]; /* destination host address */
@@ -24,7 +22,7 @@ struct ethheader {
 /* IP Header */
 struct ipheader {
   unsigned char      iph_ihl:4, //IP header length
-                     iph_ver:4; //IP version            // opposite!!!
+                     iph_ver:4; //IP version
   unsigned char      iph_tos; //Type of service
   unsigned short int iph_len; //IP Packet length (data + header)
   unsigned short int iph_ident; //Identification
@@ -82,12 +80,12 @@ void got_packet(u_char *args, const struct pcap_pkthdr *header, const u_char *pa
     fprintf(fp,"dest_port: %hu, \n", ntohs(tcp->dest));
 
 
-    fprintf(fp,"  timestamp: %u, ", ntohl(app_h->timestamp));//(int)(header->ts.tv_sec));
+    fprintf(fp,"  timestamp: %u, ", ntohl(app_h->timestamp));
     fprintf(fp,"total_length: %hu, \n", ntohs(ip->iph_len));
-    fprintf(fp,"  cache_flag: %hu, ", (app_h->flags>>12)&1);//cache_flag);
-    fprintf(fp,"steps_flag: %hu, ", (app_h->flags>>11)&1);//steps_flag);
-    fprintf(fp,"type_flag: %hu, \n", (app_h->flags>>10)&1);//type_flag);
-    fprintf(fp,"  status_code: %hu, ", (app_h->flags)&1023);//status_code);
+    fprintf(fp,"  cache_flag: %hu, ", (app_h->flags>>12)&1);
+    fprintf(fp,"steps_flag: %hu, ", (app_h->flags>>11)&1);
+    fprintf(fp,"type_flag: %hu, \n", (app_h->flags>>10)&1);
+    fprintf(fp,"  status_code: %hu, ", (app_h->flags)&1023);
     fprintf(fp,"cache_control: %hu, ", app_h->cache_control);
     fprintf(fp,"\n  data:");
     if (data_size > 0)

@@ -20,7 +20,8 @@ struct udpheader
   u_int16_t udp_ulen;            /* udp length */
   u_int16_t udp_sum;             /* udp checksum */
 };
-//ip
+
+/* IP Header */
 struct ipheader {
   unsigned char      iph_ihl:4,  // IP header length
                      iph_ver:4;  // IP version (usually 4)
@@ -56,13 +57,10 @@ void send_raw_ip_packet(struct ipheader* ip)
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
 
     // Step 2: Set socket option.
-    setsockopt(sock, IPPROTO_IP, IP_HDRINCL, 
-                     &enable, sizeof(enable));
+    setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &enable, sizeof(enable));
 
     // Step 3: Provide needed information about destination.
     dest_info.sin_family = AF_INET;
-
-    //printf("ip->iph_destip: %d \n", ip->iph_destip.s_addr);
     dest_info.sin_addr = ip->iph_destip;
     printf("sending packet... %d, %ld\n", ntohs(ip->iph_len), sizeof(dest_info));
     // Step 4: Send the packet out.
@@ -80,34 +78,33 @@ void send_raw_ip_packet(struct ipheader* ip)
 void icmp(char * buffer, struct ipheader *ip)
 {
 
-   struct icmpheader *icmp = (struct icmpheader *) (buffer + sizeof(struct ipheader));
-   icmp->icmp_type = 8; //ICMP Type: 8 is request, 0 is reply.
+  struct icmpheader *icmp = (struct icmpheader *) (buffer + sizeof(struct ipheader));
+  icmp->icmp_type = 8; //ICMP Type: 8 is request, 0 is reply.
 
-   // Calculate the checksum for integrity
-   icmp->icmp_chksum = 0;
-   icmp->icmp_chksum = in_cksum((unsigned short *)icmp, sizeof(struct icmpheader));
-    ip->iph_protocol = IPPROTO_ICMP; 
-    ip->iph_len = htons(sizeof(struct ipheader) + 
-                       sizeof(struct icmpheader));
-    send_raw_ip_packet (ip);
+  // Calculate the checksum for integrity
+  icmp->icmp_chksum = 0;
+  icmp->icmp_chksum = in_cksum((unsigned short *)icmp, sizeof(struct icmpheader));
+  ip->iph_protocol = IPPROTO_ICMP; 
+  ip->iph_len = htons(sizeof(struct ipheader) + sizeof(struct icmpheader));
+  send_raw_ip_packet (ip);
 }
 
 //udp
 void udp(char * buffer, struct ipheader *ip)
 {
 
-   struct udpheader *udp = (struct udpheader *) (buffer + sizeof(struct ipheader));
-   char *data = buffer + sizeof(struct ipheader) + sizeof(struct udpheader);
-   const char *msg = "Hello Server!\n";
-   int data_len = strlen(msg);
-   strncpy (data, msg, data_len);
-   udp->udp_sport = htons(12345);
-   udp->udp_dport = htons(9090);
-   udp->udp_ulen = htons(sizeof(struct udpheader) + data_len);
-   udp->udp_sum =  0; /* Many OSes ignore this field, so we do not calculate it. */
-   ip->iph_protocol = IPPROTO_UDP; // The value is 17.
-   ip->iph_len = htons(sizeof(struct ipheader) + sizeof(struct udpheader) + data_len);
-   send_raw_ip_packet (ip);
+  struct udpheader *udp = (struct udpheader *) (buffer + sizeof(struct ipheader));
+  char *data = buffer + sizeof(struct ipheader) + sizeof(struct udpheader);
+  const char *msg = "Hello Server!\n";
+  int data_len = strlen(msg);
+  strncpy (data, msg, data_len);
+  udp->udp_sport = htons(12345);
+  udp->udp_dport = htons(9090);
+  udp->udp_ulen = htons(sizeof(struct udpheader) + data_len);
+  udp->udp_sum =  0; /* Many OSes ignore this field, so we do not calculate it. */
+  ip->iph_protocol = IPPROTO_UDP; // The value is 17.
+  ip->iph_len = htons(sizeof(struct ipheader) + sizeof(struct udpheader) + data_len);
+  send_raw_ip_packet (ip);
 }
 
 //tcp
@@ -139,8 +136,8 @@ int main() {
   ip->iph_ver = 4;
   ip->iph_ihl = 5;
   ip->iph_ttl = 20;
-  ip->iph_sourceip.s_addr = inet_addr("8.8.8.8");//("1.2.3.4");////
-  ip->iph_destip.s_addr = inet_addr("10.0.2.15");//("8.8.8.8");//
+  ip->iph_sourceip.s_addr = inet_addr("8.8.8.8");
+  ip->iph_destip.s_addr = inet_addr("10.0.2.15");
   
 
   //icmp
